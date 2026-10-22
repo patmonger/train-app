@@ -1,23 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
   <meta charset="UTF-8">
 
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
   >
 
   <title>Trains</title>
 
-  <!-- iPhone / iPad Home Screen settings -->
+  <!-- iPhone / iPad Home Screen app settings -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Trains">
+
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#000000">
 
   <style>
+
     * {
       box-sizing: border-box;
     }
@@ -32,6 +36,10 @@
       background: #000;
     }
 
+    /*
+      Main train board
+    */
+
     #board {
       position: fixed;
       inset: 0;
@@ -41,12 +49,21 @@
       background: #000;
     }
 
-    /* Invisible edge navigation areas */
+    /*
+      Very narrow navigation areas.
+
+      Only 24 pixels on either side are used
+      for changing board.
+
+      The rest of the screen belongs to the
+      Worldline page, allowing normal scrolling.
+    */
+
     .edge-zone {
       position: fixed;
       top: 0;
       bottom: 0;
-      width: 7%;
+      width: 24px;
       z-index: 1000;
       background: transparent;
       touch-action: none;
@@ -61,23 +78,31 @@
       right: 0;
     }
 
-    /* Page indicator */
+    /*
+      Three-dot page indicator
+    */
+
     #pageIndicator {
       position: fixed;
       left: 50%;
-      bottom: calc(12px + env(safe-area-inset-bottom));
+      bottom: calc(10px + env(safe-area-inset-bottom));
       transform: translateX(-50%);
+
       z-index: 2000;
 
       display: flex;
       gap: 7px;
 
       padding: 6px 9px;
+
       border-radius: 20px;
-      background: rgba(0, 0, 0, 0.35);
+
+      background: rgba(0, 0, 0, 0.45);
 
       opacity: 0;
+
       transition: opacity 0.25s ease;
+
       pointer-events: none;
     }
 
@@ -88,168 +113,386 @@
     .dot {
       width: 7px;
       height: 7px;
+
       border-radius: 50%;
+
       background: rgba(255, 255, 255, 0.4);
     }
 
     .dot.active {
       background: #ffffff;
     }
+
   </style>
+
 </head>
+
 
 <body>
 
+  <!-- Initial board -->
+
   <iframe
     id="board"
-    src="https://tiger.worldline.global/BRGHTN/ciss;graphic=1"
+    src="https://tiger.worldline.global/BRGHTN/mobile"
     title="Train information"
   ></iframe>
 
-  <div id="leftZone" class="edge-zone"></div>
-  <div id="rightZone" class="edge-zone"></div>
+
+  <!-- Invisible left/right controls -->
+
+  <div
+    id="leftZone"
+    class="edge-zone"
+  ></div>
+
+  <div
+    id="rightZone"
+    class="edge-zone"
+  ></div>
+
+
+  <!-- Page indicator -->
 
   <div id="pageIndicator">
+
     <div class="dot"></div>
     <div class="dot"></div>
     <div class="dot"></div>
-    <div class="dot"></div>
+
   </div>
+
 
   <script>
 
+    /*
+      THREE TRAIN BOARDS
+    */
+
     const boards = [
+
       {
         name: "Brighton Departures",
-        url: "https://tiger.worldline.global/BRGHTN/ciss;graphic=1"
+        url: "https://tiger.worldline.global/BRGHTN/mobile"
       },
+
       {
         name: "Brighton Lovers Walk",
-        url: "https://tiger.worldline.global/BRGHLRD/ciss;graphic=1"
+        url: "https://tiger.worldline.global/BRGHLRD/mobile"
       },
+
       {
         name: "Farringdon Departures",
-        url: "https://tiger.worldline.global/FRNDNLT/ciss;graphic=1"
-      },
-      {
-        name: "Brighton Arrivals",
-        url: "https://tiger.worldline.global/BRGHTN/arrivals"
+        url: "https://tiger.worldline.global/FRNDNLT/mobile"
       }
+
     ];
+
+
+    /*
+      Current board
+    */
 
     let currentBoard = 0;
 
-    const iframe = document.getElementById("board");
-    const leftZone = document.getElementById("leftZone");
-    const rightZone = document.getElementById("rightZone");
-    const indicator = document.getElementById("pageIndicator");
-    const dots = document.querySelectorAll(".dot");
+
+    /*
+      Page elements
+    */
+
+    const iframe =
+      document.getElementById("board");
+
+    const leftZone =
+      document.getElementById("leftZone");
+
+    const rightZone =
+      document.getElementById("rightZone");
+
+    const indicator =
+      document.getElementById("pageIndicator");
+
+    const dots =
+      document.querySelectorAll(".dot");
 
     let indicatorTimer;
 
+
+    /*
+      Load a board
+    */
+
     function showBoard(index) {
+
+      /*
+        Going backwards from page 1
+        wraps around to page 3.
+      */
 
       if (index < 0) {
         index = boards.length - 1;
       }
+
+      /*
+        Going forwards from page 3
+        wraps around to page 1.
+      */
 
       if (index >= boards.length) {
         index = 0;
       }
 
       currentBoard = index;
-      iframe.src = boards[currentBoard].url;
+
+      iframe.src =
+        boards[currentBoard].url;
 
       updateIndicator();
+
     }
+
+
+    /*
+      Navigation
+    */
 
     function nextBoard() {
-      showBoard(currentBoard + 1);
+
+      showBoard(
+        currentBoard + 1
+      );
+
     }
 
+
     function previousBoard() {
-      showBoard(currentBoard - 1);
+
+      showBoard(
+        currentBoard - 1
+      );
+
     }
+
+
+    /*
+      Update the three dots
+    */
 
     function updateIndicator() {
 
-      dots.forEach((dot, index) => {
-        dot.classList.toggle(
-          "active",
-          index === currentBoard
+      dots.forEach(
+        (dot, index) => {
+
+          dot.classList.toggle(
+            "active",
+            index === currentBoard
+          );
+
+        }
+      );
+
+      indicator
+        .classList
+        .add("visible");
+
+      clearTimeout(
+        indicatorTimer
+      );
+
+      indicatorTimer =
+        setTimeout(
+          () => {
+
+            indicator
+              .classList
+              .remove("visible");
+
+          },
+
+          1200
         );
-      });
 
-      indicator.classList.add("visible");
-
-      clearTimeout(indicatorTimer);
-
-      indicatorTimer = setTimeout(() => {
-        indicator.classList.remove("visible");
-      }, 1500);
     }
 
-    function setupZone(zone, direction) {
+
+    /*
+      EDGE CONTROLS
+
+      A touch on the left or right edge
+      changes board.
+
+      Vertical gestures are ignored.
+
+      The middle of the screen is completely
+      untouched by our controls so that the
+      Worldline page can scroll normally.
+    */
+
+    function setupEdge(
+      zone,
+      direction
+    ) {
 
       let startX = 0;
       let startY = 0;
 
-      zone.addEventListener("pointerdown", event => {
 
-        startX = event.clientX;
-        startY = event.clientY;
+      zone.addEventListener(
 
-        zone.setPointerCapture(event.pointerId);
-      });
+        "touchstart",
 
-      zone.addEventListener("pointerup", event => {
+        event => {
 
-        const deltaX = event.clientX - startX;
-        const deltaY = event.clientY - startY;
+          if (
+            event.touches.length !== 1
+          ) {
+            return;
+          }
 
-        /*
-          Ignore mainly vertical gestures.
-          This helps preserve normal scrolling.
-        */
+          startX =
+            event.touches[0].clientX;
 
-        if (
-          Math.abs(deltaY) > Math.abs(deltaX) &&
-          Math.abs(deltaY) > 30
-        ) {
-          return;
+          startY =
+            event.touches[0].clientY;
+
+        },
+
+        {
+          passive: true
         }
 
-        if (direction === "left") {
+      );
+
+
+      zone.addEventListener(
+
+        "touchend",
+
+        event => {
+
+          if (
+            event.changedTouches.length !== 1
+          ) {
+            return;
+          }
+
+          const endX =
+            event.changedTouches[0].clientX;
+
+          const endY =
+            event.changedTouches[0].clientY;
+
+          const deltaX =
+            endX - startX;
+
+          const deltaY =
+            endY - startY;
+
+
+          /*
+            If the movement is mainly vertical,
+            do not change board.
+          */
+
+          if (
+            Math.abs(deltaY) >
+            Math.abs(deltaX)
+          ) {
+            return;
+          }
+
+
+          if (
+            direction === "left"
+          ) {
+            previousBoard();
+          }
+
+
+          if (
+            direction === "right"
+          ) {
+            nextBoard();
+          }
+
+        },
+
+        {
+          passive: true
+        }
+
+      );
+
+    }
+
+
+    setupEdge(
+      leftZone,
+      "left"
+    );
+
+
+    setupEdge(
+      rightZone,
+      "right"
+    );
+
+
+    /*
+      Mouse click support when testing
+      on a computer.
+    */
+
+    leftZone.addEventListener(
+      "click",
+      previousBoard
+    );
+
+
+    rightZone.addEventListener(
+      "click",
+      nextBoard
+    );
+
+
+    /*
+      Keyboard arrow support when testing
+      on a computer.
+    */
+
+    document.addEventListener(
+
+      "keydown",
+
+      event => {
+
+        if (
+          event.key === "ArrowLeft"
+        ) {
           previousBoard();
         }
 
-        if (direction === "right") {
+
+        if (
+          event.key === "ArrowRight"
+        ) {
           nextBoard();
         }
-      });
-    }
 
-    setupZone(leftZone, "left");
-    setupZone(rightZone, "right");
+      }
+
+    );
+
 
     /*
-      Arrow keys when testing on a computer
+      Initial page indicator
     */
 
-    document.addEventListener("keydown", event => {
-
-      if (event.key === "ArrowLeft") {
-        previousBoard();
-      }
-
-      if (event.key === "ArrowRight") {
-        nextBoard();
-      }
-    });
-
     updateIndicator();
+
 
   </script>
 
 </body>
+
 </html>
