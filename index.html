@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+  >
+
+  <title>Train Departures</title>
+
+  <!-- iPhone / iPad Home Screen app settings -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Trains">
+
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#000000">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      overscroll-behavior: none;
+    }
+
+    #board {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #000;
+    }
+
+    /*
+      Only the very edges capture navigation gestures.
+      The middle remains available for scrolling.
+    */
+
+    .edge-zone {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      width: 7%;
+      z-index: 1000;
+      background: transparent;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #leftZone {
+      left: 0;
+    }
+
+    #rightZone {
+      right: 0;
+    }
+
+    /*
+      Four-dot page indicator
+    */
+
+    #pageIndicator {
+      position: fixed;
+      left: 50%;
+      bottom: calc(12px + env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      z-index: 2000;
+
+      display: flex;
+      gap: 7px;
+
+      padding: 6px 9px;
+      border-radius: 20px;
+      background: rgba(0, 0, 0, 0.35);
+
+      opacity: 0;
+      transition: opacity 0.25s ease;
+
+      pointer-events: none;
+    }
+
+    #pageIndicator.visible {
+      opacity: 1;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.4);
+    }
+
+    .dot.active {
+      background: #ffffff;
+    }
+  </style>
+</head>
+
+<body>
+
+  https://tiger.worldline.global/BRGHTN/ciss;graphic=1
+  </iframe>
+
+  <div id="leftZone" class="edge-zone"></div>
+  <div id="rightZone" class="edge-zone"></div>
+
+  <div id="pageIndicator">
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+
+  <script>
+
+    const boards = [
+      {
+        name: "Brighton Departures",
+        url: "https://tiger.worldline.global/BRGHTN/ciss;graphic=1"
+      },
+      {
+        name: "Brighton Lovers Walk",
+        url: "https://tiger.worldline.global/BRGHLRD/ciss;graphic=1"
+      },
+      {
+        name: "Farringdon Departures",
+        url: "https://tiger.worldline.global/FRNDNLT/ciss;graphic=1"
+      },
+      {
+        name: "Brighton Arrivals",
+        url: "https://tiger.worldline.global/BRGHTN/arrivals"
+      }
+    ];
+
+    let currentBoard = 0;
+
+    const iframe = document.getElementById("board");
+    const leftZone = document.getElementById("leftZone");
+    const rightZone = document.getElementById("rightZone");
+    const indicator = document.getElementById("pageIndicator");
+    const dots = document.querySelectorAll(".dot");
+
+    let indicatorTimer;
+
+    function showBoard(index) {
+
+      if (index < 0) {
+        index = boards.length - 1;
+      }
+
+      if (index >= boards.length) {
+        index = 0;
+      }
+
+      currentBoard = index;
+
+      iframe.src = boards[currentBoard].url;
+
+      updateIndicator();
+    }
+
+    function nextBoard() {
+      showBoard(currentBoard + 1);
+    }
+
+    function previousBoard() {
+      showBoard(currentBoard - 1);
+    }
+
+    function updateIndicator() {
+
+      dots.forEach((dot, index) => {
+        dot.classList.toggle(
+          "active",
+          index === currentBoard
+        );
+      });
+
+      indicator.classList.add("visible");
+
+      clearTimeout(indicatorTimer);
+
+      indicatorTimer = setTimeout(() => {
+        indicator.classList.remove("visible");
+      }, 1500);
+    }
+
+    /*
+      Edge navigation
+    */
+
+    function setupZone(zone, direction) {
+
+      let startX = 0;
+      let startY = 0;
+
+      zone.addEventListener("pointerdown", event => {
+
+        startX = event.clientX;
+        startY = event.clientY;
+
+        zone.setPointerCapture(event.pointerId);
+
+      });
+
+      zone.addEventListener("pointerup", event => {
+
+        const deltaX = event.clientX - startX;
+        const deltaY = event.clientY - startY;
+
+        /*
+          Ignore vertical movements so accidental scrolling
+          near the edge doesn't change boards.
+        */
+
+        if (
+          Math.abs(deltaY) > Math.abs(deltaX) &&
+          Math.abs(deltaY) > 30
+        ) {
+          return;
+        }
+
+        if (direction === "left") {
+          previousBoard();
+        }
+
+        if (direction === "right") {
+          nextBoard();
+        }
+
+      });
+
+    }
+
+    setupZone(leftZone, "left");
+    setupZone(rightZone, "right");
+
+    /*
+      Arrow keys for desktop testing
+    */
+
+    document.addEventListener("keydown", event => {
+
+      if (event.key === "ArrowLeft") {
+        previousBoard();
+      }
+
+      if (event.key === "ArrowRight") {
+        nextBoard();
+      }
+
+    });
+
+    updateIndicator();
+
+  </script>
+
+</body>
+</html>
+
+
