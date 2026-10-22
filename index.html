@@ -8,9 +8,9 @@
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
   >
 
-  <title>Train Departures</title>
+  <title>Trains</title>
 
-  <!-- iPhone / iPad Home Screen app settings -->
+  <!-- iPhone / iPad Home Screen settings -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Trains">
@@ -34,6 +34,7 @@
       overscroll-behavior: none;
     }
 
+    /* Main train information page */
     #board {
       position: fixed;
       inset: 0;
@@ -44,8 +45,9 @@
     }
 
     /*
-      Only the very edges capture navigation gestures.
-      The middle remains available for scrolling.
+      Navigation zones only occupy the very edges.
+      This leaves the middle of the train page free
+      for normal vertical scrolling.
     */
 
     .edge-zone {
@@ -67,15 +69,14 @@
       right: 0;
     }
 
-    /*
-      Four-dot page indicator
-    */
+    /* Page indicator */
 
     #pageIndicator {
       position: fixed;
       left: 50%;
       bottom: calc(12px + env(safe-area-inset-bottom));
       transform: translateX(-50%);
+
       z-index: 2000;
 
       display: flex;
@@ -83,6 +84,7 @@
 
       padding: 6px 9px;
       border-radius: 20px;
+
       background: rgba(0, 0, 0, 0.35);
 
       opacity: 0;
@@ -110,12 +112,18 @@
 
 <body>
 
-  https://tiger.worldline.global/BRGHTN/ciss;graphic=1
+  <iframe
+    id="board"
+    src="https://tiger.worldline.global/BRGHTN/ciss;graphic=1"
+    title="Train information"
+    allowfullscreen>
   </iframe>
 
+  <!-- Invisible navigation areas -->
   <div id="leftZone" class="edge-zone"></div>
   <div id="rightZone" class="edge-zone"></div>
 
+  <!-- Four board indicators -->
   <div id="pageIndicator">
     <div class="dot"></div>
     <div class="dot"></div>
@@ -126,33 +134,53 @@
   <script>
 
     const boards = [
+
       {
         name: "Brighton Departures",
         url: "https://tiger.worldline.global/BRGHTN/ciss;graphic=1"
       },
+
       {
         name: "Brighton Lovers Walk",
         url: "https://tiger.worldline.global/BRGHLRD/ciss;graphic=1"
       },
+
       {
         name: "Farringdon Departures",
         url: "https://tiger.worldline.global/FRNDNLT/ciss;graphic=1"
       },
+
       {
         name: "Brighton Arrivals",
         url: "https://tiger.worldline.global/BRGHTN/arrivals"
       }
+
     ];
+
 
     let currentBoard = 0;
 
-    const iframe = document.getElementById("board");
-    const leftZone = document.getElementById("leftZone");
-    const rightZone = document.getElementById("rightZone");
-    const indicator = document.getElementById("pageIndicator");
-    const dots = document.querySelectorAll(".dot");
+    const iframe =
+      document.getElementById("board");
+
+    const leftZone =
+      document.getElementById("leftZone");
+
+    const rightZone =
+      document.getElementById("rightZone");
+
+    const indicator =
+      document.getElementById("pageIndicator");
+
+    const dots =
+      document.querySelectorAll(".dot");
 
     let indicatorTimer;
+
+
+    /*
+      Load a board
+    */
 
     function showBoard(index) {
 
@@ -166,10 +194,16 @@
 
       currentBoard = index;
 
-      iframe.src = boards[currentBoard].url;
+      iframe.src =
+        boards[currentBoard].url;
 
       updateIndicator();
     }
+
+
+    /*
+      Navigation
+    */
 
     function nextBoard() {
       showBoard(currentBoard + 1);
@@ -179,13 +213,20 @@
       showBoard(currentBoard - 1);
     }
 
+
+    /*
+      Update the four dots
+    */
+
     function updateIndicator() {
 
       dots.forEach((dot, index) => {
+
         dot.classList.toggle(
           "active",
           index === currentBoard
         );
+
       });
 
       indicator.classList.add("visible");
@@ -193,12 +234,19 @@
       clearTimeout(indicatorTimer);
 
       indicatorTimer = setTimeout(() => {
+
         indicator.classList.remove("visible");
+
       }, 1500);
     }
 
+
     /*
-      Edge navigation
+      Set up the left and right edge controls.
+
+      The centre of the screen isn't covered by these
+      controls, so the train board can still scroll
+      normally up and down.
     */
 
     function setupZone(zone, direction) {
@@ -206,62 +254,92 @@
       let startX = 0;
       let startY = 0;
 
-      zone.addEventListener("pointerdown", event => {
+      zone.addEventListener(
+        "pointerdown",
+        event => {
 
-        startX = event.clientX;
-        startY = event.clientY;
+          startX = event.clientX;
+          startY = event.clientY;
 
-        zone.setPointerCapture(event.pointerId);
-
-      });
-
-      zone.addEventListener("pointerup", event => {
-
-        const deltaX = event.clientX - startX;
-        const deltaY = event.clientY - startY;
-
-        /*
-          Ignore vertical movements so accidental scrolling
-          near the edge doesn't change boards.
-        */
-
-        if (
-          Math.abs(deltaY) > Math.abs(deltaX) &&
-          Math.abs(deltaY) > 30
-        ) {
-          return;
+          zone.setPointerCapture(
+            event.pointerId
+          );
         }
+      );
 
-        if (direction === "left") {
+
+      zone.addEventListener(
+        "pointerup",
+        event => {
+
+          const deltaX =
+            event.clientX - startX;
+
+          const deltaY =
+            event.clientY - startY;
+
+
+          /*
+            If the movement was mainly vertical,
+            assume the user was trying to scroll.
+          */
+
+          if (
+            Math.abs(deltaY) >
+            Math.abs(deltaX) &&
+            Math.abs(deltaY) > 30
+          ) {
+            return;
+          }
+
+
+          if (direction === "left") {
+            previousBoard();
+          }
+
+          if (direction === "right") {
+            nextBoard();
+          }
+
+        }
+      );
+    }
+
+
+    setupZone(
+      leftZone,
+      "left"
+    );
+
+    setupZone(
+      rightZone,
+      "right"
+    );
+
+
+    /*
+      Arrow keys for testing on a computer.
+    */
+
+    document.addEventListener(
+      "keydown",
+      event => {
+
+        if (event.key === "ArrowLeft") {
           previousBoard();
         }
 
-        if (direction === "right") {
+        if (event.key === "ArrowRight") {
           nextBoard();
         }
 
-      });
+      }
+    );
 
-    }
-
-    setupZone(leftZone, "left");
-    setupZone(rightZone, "right");
 
     /*
-      Arrow keys for desktop testing
+      Show the initial board indicator.
     */
-
-    document.addEventListener("keydown", event => {
-
-      if (event.key === "ArrowLeft") {
-        previousBoard();
-      }
-
-      if (event.key === "ArrowRight") {
-        nextBoard();
-      }
-
-    });
 
     updateIndicator();
 
@@ -269,5 +347,3 @@
 
 </body>
 </html>
-
-
